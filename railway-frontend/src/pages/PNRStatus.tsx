@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { SearchIcon } from '@heroicons/react/outline';
+import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
-import { getBookingDetails } from '../services/train';
+import { getBookingDetails } from '../services/train.ts';
 
 interface PNRDetails {
   pnrNumber: string;
@@ -80,7 +80,7 @@ const PNRStatus: React.FC = () => {
               <span>Checking...</span>
             ) : (
               <>
-                <SearchIcon className="h-5 w-5 mr-2" />
+                <MagnifyingGlassIcon className="h-5 w-5 mr-2" />
                 <span>Check Status</span>
               </>
             )}
@@ -145,5 +145,4 @@ const PNRStatus: React.FC = () => {
   );
 };
 
-export default PNRStatus; 
-export default PNRStatus; 
+export default PNRStatus;

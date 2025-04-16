@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { TrainIcon, TicketIcon, SearchIcon, UserIcon } from '@heroicons/react/outline';
-import { getCurrentUser, logout } from '../services/auth';
+import { ArrowRightOnRectangleIcon, TicketIcon, MagnifyingGlassIcon, UserIcon } from '@heroicons/react/24/outline';
+import { getCurrentUser, logout } from '../services/auth.ts';
 import toast from 'react-hot-toast';
 
 const Navbar: React.FC = () => {
@@ -21,14 +21,14 @@ const Navbar: React.FC = () => {
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center h-16">
           <Link to="/" className="flex items-center space-x-2">
-            <TrainIcon className="h-8 w-8 text-indigo-600" />
+            <ArrowRightOnRectangleIcon className="h-8 w-8 text-indigo-600" />
             <span className="text-2xl font-bold text-gray-800">RailwayEase</span>
           </Link>
           
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
             <Link to="/search" className="nav-link flex items-center space-x-1">
-              <SearchIcon className="h-5 w-5" />
+              <MagnifyingGlassIcon className="h-5 w-5" />
               <span>Search Trains</span>
             </Link>
             {user ? (

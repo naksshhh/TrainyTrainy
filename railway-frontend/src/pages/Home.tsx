@@ -1,12 +1,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { SearchIcon, TicketIcon, ClockIcon, UserIcon } from '@heroicons/react/outline';
+import { MagnifyingGlassIcon, TicketIcon, ClockIcon, UserIcon } from '@heroicons/react/24/outline';
 
 const features = [
   {
     name: 'Search Trains',
     description: 'Find trains between stations with real-time availability',
-    icon: SearchIcon,
+    icon: MagnifyingGlassIcon,
     link: '/search'
   },
   {
@@ -31,95 +31,66 @@ const features = [
 
 const Home: React.FC = () => {
   return (
-    <div className="space-y-16">
+    <div className="space-y-20 bg-gray-50 min-h-screen">
       {/* Hero Section */}
-      <div className="relative overflow-hidden">
-        <div className="gradient-bg absolute inset-0 opacity-10"></div>
-        <div className="relative max-w-7xl mx-auto py-16 px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h1 className="text-4xl tracking-tight font-extrabold text-gray-900 sm:text-5xl md:text-6xl">
-              <span className="block">Travel Smart with</span>
-              <span className="block text-indigo-600">RailwayEase</span>
-            </h1>
-            <p className="mt-3 max-w-md mx-auto text-base text-gray-500 sm:text-lg md:mt-5 md:text-xl md:max-w-3xl">
-              Book train tickets, check PNR status, and manage your journeys - all in one place.
-              Experience hassle-free train travel booking.
-            </p>
-            <div className="mt-5 max-w-md mx-auto sm:flex sm:justify-center md:mt-8">
-              <div className="rounded-md shadow">
-                <Link to="/search"
-                  className="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 md:py-4 md:text-lg md:px-10"
-                >
-                  Search Trains
-                </Link>
-              </div>
-              <div className="mt-3 rounded-md shadow sm:mt-0 sm:ml-3">
-                <Link to="/book"
-                  className="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-indigo-600 bg-white hover:bg-gray-50 md:py-4 md:text-lg md:px-10"
-                >
-                  Book Now
-                </Link>
-              </div>
-            </div>
+      <div className="relative overflow-hidden bg-gradient-to-br from-indigo-700 to-indigo-400 py-16 px-4 sm:px-6 lg:px-8 shadow-xl">
+        <div className="relative max-w-4xl mx-auto text-center">
+          <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight text-white drop-shadow-lg">
+            <span className="block">Travel Smart with</span>
+            <span className="block text-yellow-300">RailwayEase</span>
+          </h1>
+          <p className="mt-6 max-w-2xl mx-auto text-lg md:text-2xl text-indigo-100 font-light">
+            Book train tickets, check PNR status, and manage your journeys – all in one place. Experience hassle-free train travel booking.
+          </p>
+          <div className="mt-8 flex flex-col sm:flex-row justify-center gap-4">
+            <Link to="/search" className="inline-block px-8 py-3 rounded-lg bg-yellow-300 text-indigo-900 font-semibold text-lg shadow hover:bg-yellow-400 transition">
+              Search Trains
+            </Link>
+            <Link to="/book" className="inline-block px-8 py-3 rounded-lg bg-white text-indigo-700 font-semibold text-lg shadow hover:bg-indigo-100 transition">
+              Book Now
+            </Link>
           </div>
         </div>
       </div>
 
       {/* Features Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center">
-          <h2 className="text-3xl font-extrabold text-gray-900">
-            Everything you need for train travel
-          </h2>
-          <p className="mt-4 text-lg text-gray-500">
-            Simple, fast, and reliable train booking system designed for modern travelers.
-          </p>
+        <div className="text-center mb-12">
+          <h2 className="text-3xl md:text-4xl font-extrabold text-indigo-900 mb-2">Everything you need for train travel</h2>
+          <p className="text-lg text-gray-600 font-medium">Simple, fast, and reliable train booking system designed for modern travelers.</p>
         </div>
-
-        <div className="mt-12">
-          <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
-            {features.map((feature) => (
-              <Link key={feature.name} to={feature.link} className="card hover:border-indigo-500 border-2 border-transparent">
-                <div className="flex flex-col items-center text-center">
-                  <feature.icon className="h-12 w-12 text-indigo-600" />
-                  <h3 className="mt-6 text-lg font-medium text-gray-900">{feature.name}</h3>
-                  <p className="mt-2 text-base text-gray-500">{feature.description}</p>
-                </div>
-              </Link>
-            ))}
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+          {features.map((feature) => (
+            <Link key={feature.name} to={feature.link} className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl border border-gray-100 hover:border-indigo-400 transition p-6 flex flex-col items-center text-center cursor-pointer">
+              <div className="flex items-center justify-center h-20 w-20 rounded-full bg-indigo-50 group-hover:bg-indigo-100 mb-4 shadow">
+                {React.createElement(feature.icon, { className: 'h-10 w-10 text-indigo-600 group-hover:text-yellow-400 transition' })}
+              </div>
+              <h3 className="text-xl font-bold text-indigo-900 group-hover:text-yellow-400 transition mb-2">{feature.name}</h3>
+              <p className="text-gray-500 font-medium">{feature.description}</p>
+            </Link>
+          ))}
         </div>
       </div>
 
       {/* Stats Section */}
       <div className="bg-indigo-800">
-        <div className="max-w-7xl mx-auto py-12 px-4 sm:py-16 sm:px-6 lg:px-8 lg:py-20">
+        <div className="max-w-7xl mx-auto py-16 px-4 sm:py-20 sm:px-6 lg:px-8">
           <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-3xl font-extrabold text-white sm:text-4xl">
-              Trusted by thousands of travelers
-            </h2>
-            <p className="mt-3 text-xl text-indigo-200">
-              Join our growing community of satisfied travelers who choose RailwayEase for their train journeys.
-            </p>
+            <h2 className="text-3xl md:text-4xl font-extrabold text-white mb-4">Trusted by thousands of travelers</h2>
+            <p className="text-xl text-indigo-200 font-light">Join our growing community of satisfied travelers who choose RailwayEase for their train journeys.</p>
           </div>
-          <dl className="mt-10 text-center sm:max-w-3xl sm:mx-auto sm:grid sm:grid-cols-3 sm:gap-8">
-            <div className="flex flex-col">
-              <dt className="order-2 mt-2 text-lg leading-6 font-medium text-indigo-200">
-                Daily Bookings
-              </dt>
-              <dd className="order-1 text-5xl font-extrabold text-white">1000+</dd>
+          <dl className="mt-12 text-center grid grid-cols-1 sm:grid-cols-3 gap-8">
+            <div className="flex flex-col items-center">
+              <dt className="order-2 mt-2 text-lg font-medium text-indigo-200">Daily Bookings</dt>
+              <dd className="order-1 text-5xl font-extrabold text-yellow-300 drop-shadow">1000+</dd>
             </div>
-            <div className="flex flex-col mt-10 sm:mt-0">
-              <dt className="order-2 mt-2 text-lg leading-6 font-medium text-indigo-200">
-                Routes
-              </dt>
-              <dd className="order-1 text-5xl font-extrabold text-white">500+</dd>
+            <div className="flex flex-col items-center">
+              <dt className="order-2 mt-2 text-lg font-medium text-indigo-200">Routes</dt>
+              <dd className="order-1 text-5xl font-extrabold text-yellow-300 drop-shadow">500+</dd>
             </div>
-            <div className="flex flex-col mt-10 sm:mt-0">
-              <dt className="order-2 mt-2 text-lg leading-6 font-medium text-indigo-200">
-                Happy Customers
-              </dt>
-              <dd className="order-1 text-5xl font-extrabold text-white">50K+</dd>
+            <div className="flex flex-col items-center">
+              <dt className="order-2 mt-2 text-lg font-medium text-indigo-200">Happy Customers</dt>
+              <dd className="order-1 text-5xl font-extrabold text-yellow-300 drop-shadow">50K+</dd>
             </div>
           </dl>
         </div>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { TicketIcon, XIcon } from '@heroicons/react/outline';
+import { TicketIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
-import { getUserBookings, cancelBooking } from '../services/train';
+import { getUserBookings, cancelBooking } from '../services/train.ts';
 
 interface Booking {
   pnrNumber: string;
@@ -181,7 +181,7 @@ const MyBookings: React.FC = () => {
                       }}
                       className="btn-danger flex items-center"
                     >
-                      <XIcon className="h-5 w-5 mr-2" />
+                      <XMarkIcon className="h-5 w-5 mr-2" />
                       Cancel Booking
                     </button>
                   )}

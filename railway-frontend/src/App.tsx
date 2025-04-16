@@ -1,14 +1,14 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Navbar from './components/Navbar';
-import ProtectedRoute from './components/ProtectedRoute';
-import Home from './pages/Home';
-import Login from './pages/Login';
-import Signup from './pages/Signup';
-import SearchTrains from './pages/SearchTrains';
-import BookTicket from './pages/BookTicket';
-import MyBookings from './pages/MyBookings';
-import PNRStatus from './pages/PNRStatus';
+import Navbar from './components/Navbar.tsx';
+import ProtectedRoute from './components/ProtectedRoute.tsx';
+import Home from './pages/Home.tsx';
+import Login from './pages/Login.tsx';
+import Signup from './pages/Signup.tsx';
+import SearchTrains from './pages/SearchTrains.tsx';
+import BookTicket from './pages/BookTicket.tsx';
+import MyBookings from './pages/MyBookings.tsx';
+import PNRStatus from './pages/PNRStatus.tsx';
 import { Toaster } from 'react-hot-toast';
 
 function App() {

@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { SearchIcon } from '@heroicons/react/outline';
+import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
-import { searchTrains, Train } from '../services/train';
+import { searchTrains, Train } from '../services/train.ts';
 
 const SearchTrains: React.FC = () => {
   const [source, setSource] = useState('');
@@ -97,7 +97,7 @@ const SearchTrains: React.FC = () => {
                 <span>Searching...</span>
               ) : (
                 <>
-                  <SearchIcon className="h-5 w-5 mr-2" />
+                  <MagnifyingGlassIcon className="h-5 w-5 mr-2" />
                   <span>Search</span>
                 </>
               )}
