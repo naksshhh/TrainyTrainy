@@ -26,17 +26,18 @@ router.get('/search', async (req: express.Request, res: express.Response) => {
 });
 
 // Check seat availability
-router.get('/availability', async (req: express.Request, res: express.Response) => {
+router.get('/:id/availability', async (req: express.Request, res: express.Response) => {
   try {
-    const { trainId, journeyDate, classType } = req.query;
+    const { id } = req.params;
+    const { date, classType } = req.query;
 
-    if (!trainId || !journeyDate || !classType) {
+    if (!id || !date || !classType) {
       return res.status(400).json({ error: 'Missing required parameters' });
     }
 
     const availableSeats = await getSeatAvailability(
-      parseInt(trainId as string),
-      new Date(journeyDate as string),
+      parseInt(id),
+      new Date(date as string),
       classType as string
     );
 

@@ -3,6 +3,14 @@ CREATE DATABASE IF NOT EXISTS railway_reservation;
 USE railway_reservation;
 
 -- Create tables
+CREATE TABLE IF NOT EXISTS users (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(50) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE Passenger (
     passenger_id INT PRIMARY KEY AUTO_INCREMENT,
     first_name VARCHAR(50) NOT NULL,
@@ -72,7 +80,7 @@ CREATE TABLE Ticket (
     journey_date DATE NOT NULL,
     booking_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     status ENUM('Confirmed', 'Waitlist', 'RAC', 'Cancelled') NOT NULL,
-    seat_number VARCHAR(10),
+    seat_number VARCHAR(30),
     fare DECIMAL(10,2) NOT NULL,
     FOREIGN KEY (passenger_id) REFERENCES Passenger(passenger_id),
     FOREIGN KEY (train_id) REFERENCES Train(train_id),
@@ -140,37 +148,213 @@ CREATE PROCEDURE book_ticket(
     IN p_source_station_id INT,
     IN p_destination_station_id INT,
     IN p_journey_date DATE,
+    IN p_pnr_number VARCHAR(10),
+    IN p_fare DECIMAL(10,2),
     OUT p_ticket_id INT
 )
 BEGIN
-    DECLARE v_fare DECIMAL(10,2);
-    DECLARE v_pnr VARCHAR(10);
     DECLARE v_available_seats INT;
-    
-    -- Calculate fare
-    SELECT (r.distance * tc.fare_per_km) INTO v_fare
-    FROM Train t
-    JOIN Route r ON t.route_id = r.route_id
-    JOIN TrainClass tc ON t.train_id = tc.train_id
-    WHERE t.train_id = p_train_id AND tc.class_id = p_class_id;
-    
-    -- Generate PNR
-    SET v_pnr = CONCAT('PNR', LPAD(FLOOR(RAND() * 1000000), 6, '0'));
-    
+    DECLARE v_status VARCHAR(10);
+    DECLARE v_seat_number VARCHAR(10);
+    DECLARE v_class_type VARCHAR(20);
+    DECLARE v_seat_num INT;
+
+    -- Get class type
+    SELECT class_type INTO v_class_type FROM TrainClass WHERE class_id = p_class_id;
+
     -- Check seat availability
-    CALL check_seat_availability(p_train_id, p_class_id, p_journey_date);
-    
+    SELECT 
+        (tc.total_seats - COALESCE(COUNT(t.ticket_id), 0)) INTO v_available_seats
+    FROM TrainClass tc
+    LEFT JOIN Ticket t ON t.train_id = tc.train_id
+        AND t.class_id = tc.class_id
+        AND t.journey_date = p_journey_date
+        AND t.status IN ('Confirmed', 'RAC')
+    WHERE tc.train_id = p_train_id
+        AND tc.class_id = p_class_id
+    GROUP BY tc.class_id;
+
+    -- Determine booking status
+    IF v_available_seats > 0 THEN
+        SET v_status = 'Confirmed';
+        -- Get next seat number
+        SELECT IFNULL(MAX(CAST(SUBSTRING_INDEX(seat_number, '-', -1) AS SIGNED)), 0) + 1 INTO v_seat_num
+        FROM Ticket
+        WHERE train_id = p_train_id
+        AND class_id = p_class_id
+        AND journey_date = p_journey_date
+        AND status = 'Confirmed';
+
+        -- Compact seat number format
+        IF v_class_type = 'Sleeper' THEN
+            SET v_seat_number = CONCAT('S-', LPAD(v_seat_num, 3, '0'));
+        ELSEIF v_class_type = 'AC 2-tier' THEN
+            SET v_seat_number = CONCAT('A2-', LPAD(v_seat_num, 3, '0'));
+        ELSEIF v_class_type = 'AC 3-tier' THEN
+            SET v_seat_number = CONCAT('A3-', LPAD(v_seat_num, 3, '0'));
+        ELSEIF v_class_type = 'First Class' THEN
+            SET v_seat_number = CONCAT('F-', LPAD(v_seat_num, 3, '0'));
+        ELSE
+            SET v_seat_number = LPAD(v_seat_num, 3, '0');
+        END IF;
+    ELSE
+        -- Check RAC availability
+        SELECT 
+            (FLOOR(tc.total_seats * 0.1) - COALESCE(COUNT(t.ticket_id), 0)) INTO v_available_seats
+        FROM TrainClass tc
+        LEFT JOIN Ticket t ON t.train_id = tc.train_id
+            AND t.class_id = tc.class_id
+            AND t.journey_date = p_journey_date
+            AND t.status = 'RAC'
+        WHERE tc.train_id = p_train_id
+            AND tc.class_id = p_class_id
+        GROUP BY tc.class_id;
+
+        IF v_available_seats > 0 THEN
+            SET v_status = 'RAC';
+            -- Find the next berth to be shared by RAC passengers
+            DECLARE v_rac_berth_num INT;
+            -- Get the lowest berth number with only one RAC assigned, or next available berth
+            SELECT MIN(CAST(SUBSTRING_INDEX(seat_number, '-', -1) AS SIGNED)) INTO v_rac_berth_num
+            FROM Ticket
+            WHERE train_id = p_train_id
+              AND class_id = p_class_id
+              AND journey_date = p_journey_date
+              AND status = 'RAC'
+            GROUP BY seat_number
+            HAVING COUNT(*) = 1
+            LIMIT 1;
+            IF v_rac_berth_num IS NULL THEN
+                -- No partially filled RAC berth, assign next available berth
+                SELECT IFNULL(MAX(CAST(SUBSTRING_INDEX(seat_number, '-', -1) AS SIGNED)), 0) + 1 INTO v_rac_berth_num
+                FROM Ticket
+                WHERE train_id = p_train_id
+                  AND class_id = p_class_id
+                  AND journey_date = p_journey_date
+                  AND status IN ('Confirmed', 'RAC');
+            END IF;
+            -- Format the seat number as for confirmed
+            IF v_class_type = 'Sleeper' THEN
+                SET v_seat_number = CONCAT('S-', LPAD(v_rac_berth_num, 3, '0'));
+            ELSEIF v_class_type = 'AC 2-tier' THEN
+                SET v_seat_number = CONCAT('A2-', LPAD(v_rac_berth_num, 3, '0'));
+            ELSEIF v_class_type = 'AC 3-tier' THEN
+                SET v_seat_number = CONCAT('A3-', LPAD(v_rac_berth_num, 3, '0'));
+            ELSEIF v_class_type = 'First Class' THEN
+                SET v_seat_number = CONCAT('F-', LPAD(v_rac_berth_num, 3, '0'));
+            ELSE
+                SET v_seat_number = LPAD(v_rac_berth_num, 3, '0');
+            END IF;
+        ELSE
+            SET v_status = 'Waitlist';
+            -- Get next waitlist number
+            SELECT IFNULL(MAX(CAST(SUBSTRING(seat_number, 2) AS SIGNED)), 0) + 1 INTO v_seat_num
+            FROM Ticket
+            WHERE train_id = p_train_id
+            AND class_id = p_class_id
+            AND journey_date = p_journey_date
+            AND status = 'Waitlist';
+            SET v_seat_number = CONCAT('W', LPAD(v_seat_num, 3, '0'));
+        END IF;
+    END IF;
+
+    -- Ensure seat number is at most 10 chars
+    SET v_seat_number = LEFT(v_seat_number, 10);
+
     -- Insert ticket
     INSERT INTO Ticket (
         pnr_number, passenger_id, train_id, class_id,
         source_station_id, destination_station_id,
-        journey_date, status, fare
+        journey_date, status, seat_number, fare
     ) VALUES (
-        v_pnr, p_passenger_id, p_train_id, p_class_id,
+        p_pnr_number, p_passenger_id, p_train_id, p_class_id,
         p_source_station_id, p_destination_station_id,
-        p_journey_date, 'Confirmed', v_fare
+        p_journey_date, v_status, v_seat_number, p_fare
     );
-    
+
+    SET p_ticket_id = LAST_INSERT_ID();
+END //
+DELIMITER ;
+BEGIN
+    DECLARE v_available_seats INT;
+    DECLARE v_status VARCHAR(10);
+    DECLARE v_seat_number VARCHAR(30);
+
+    -- Check seat availability
+    SELECT 
+        (tc.total_seats - COALESCE(COUNT(t.ticket_id), 0)) INTO v_available_seats
+    FROM TrainClass tc
+    LEFT JOIN Ticket t ON t.train_id = tc.train_id
+        AND t.class_id = tc.class_id
+        AND t.journey_date = p_journey_date
+        AND t.status IN ('Confirmed', 'RAC')
+    WHERE tc.train_id = p_train_id
+        AND tc.class_id = p_class_id
+    GROUP BY tc.class_id;
+
+    -- Determine booking status
+    IF v_available_seats > 0 THEN
+        SET v_status = 'Confirmed';
+        -- Get next seat number
+        SELECT IFNULL(MAX(CAST(SUBSTRING_INDEX(seat_number, '-', -1) AS SIGNED)), 0) + 1 INTO v_seat_number
+        FROM Ticket
+        WHERE train_id = p_train_id
+        AND class_id = p_class_id
+        AND journey_date = p_journey_date
+        AND status = 'Confirmed';
+        
+        SET v_seat_number = CONCAT(
+            (SELECT class_type FROM TrainClass WHERE class_id = p_class_id),
+            '-',
+            LPAD(v_seat_number, 3, '0')
+        );
+    ELSE
+        -- Check RAC availability
+        SELECT 
+            (FLOOR(tc.total_seats * 0.1) - COALESCE(COUNT(t.ticket_id), 0)) INTO v_available_seats
+        FROM TrainClass tc
+        LEFT JOIN Ticket t ON t.train_id = tc.train_id
+            AND t.class_id = tc.class_id
+            AND t.journey_date = p_journey_date
+            AND t.status = 'RAC'
+        WHERE tc.train_id = p_train_id
+            AND tc.class_id = p_class_id
+        GROUP BY tc.class_id;
+
+        IF v_available_seats > 0 THEN
+            SET v_status = 'RAC';
+            -- Get next RAC number
+            SELECT IFNULL(MAX(CAST(SUBSTRING(seat_number, 5) AS SIGNED)), 0) + 1 INTO v_seat_number
+            FROM Ticket
+            WHERE train_id = p_train_id
+            AND class_id = p_class_id
+            AND journey_date = p_journey_date
+            AND status = 'RAC';
+            SET v_seat_number = CONCAT('RAC/', LPAD(v_seat_number, 2, '0'));
+        ELSE
+            SET v_status = 'Waitlist';
+            -- Get next waitlist number
+            SELECT IFNULL(MAX(CAST(SUBSTRING(seat_number, 4) AS SIGNED)), 0) + 1 INTO v_seat_number
+            FROM Ticket
+            WHERE train_id = p_train_id
+            AND class_id = p_class_id
+            AND journey_date = p_journey_date
+            AND status = 'Waitlist';
+            SET v_seat_number = CONCAT('WL/', LPAD(v_seat_number, 3, '0'));
+        END IF;
+    END IF;
+
+    -- Insert ticket
+    INSERT INTO Ticket (
+        pnr_number, passenger_id, train_id, class_id,
+        source_station_id, destination_station_id,
+        journey_date, status, seat_number, fare
+    ) VALUES (
+        p_pnr_number, p_passenger_id, p_train_id, p_class_id,
+        p_source_station_id, p_destination_station_id,
+        p_journey_date, v_status, v_seat_number, p_fare
+    );
+
     SET p_ticket_id = LAST_INSERT_ID();
 END //
 DELIMITER ;
@@ -217,24 +401,8 @@ DELIMITER ;
 -- Create triggers
 
 -- Trigger to update seat availability after ticket booking
-DELIMITER //
-CREATE TRIGGER after_ticket_insert
-AFTER INSERT ON Ticket
-FOR EACH ROW
-BEGIN
-    -- Update seat number if status is Confirmed
-    IF NEW.status = 'Confirmed' THEN
-        UPDATE Ticket 
-        SET seat_number = CONCAT(
-            (SELECT class_type FROM TrainClass WHERE class_id = NEW.class_id),
-            '-',
-            LPAD((SELECT COUNT(*) FROM Ticket 
-                  WHERE train_id = NEW.train_id 
-                  AND class_id = NEW.class_id 
-                  AND journey_date = NEW.journey_date
-                  AND status = 'Confirmed'), 3, '0')
-        )
-        WHERE ticket_id = NEW.ticket_id;
-    END IF;
-END //
-DELIMITER ; 
+-- (REMOVED: All seat number logic is now in the book_ticket procedure)
+-- DELIMITER //
+-- CREATE TRIGGER after_ticket_insert
+-- ... (trigger removed)
+-- DELIMITER ;
