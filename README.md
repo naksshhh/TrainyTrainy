@@ -33,6 +33,6 @@ This is a database management system project for a railway ticket reservation sy
 
 ## Documentation
 Refer to the following files for detailed documentation:
-- ER Diagram: `docs/ER_Diagram.pdf`
+- ER Diagram: `er_diagram_sql_final.pdf`
 - Schema Documentation: `docs/schema_documentation.pdf`
 - Query Documentation: `docs/query_documentation.pdf` 
