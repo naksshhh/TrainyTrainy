@@ -22,7 +22,7 @@ export const login = async (email: string, password: string): Promise<AuthRespon
 };
 
 export const signup = async (name: string, email: string, password: string): Promise<AuthResponse> => {
-  const response = await axios.post(`${API_URL}/auth/signup`, { name, email, password });
+  const response = await axios.post(`${API_URL}/auth/register`, { username: name, email, password });
   if (response.data.token) {
     localStorage.setItem('user', JSON.stringify(response.data));
   }

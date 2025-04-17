@@ -4,19 +4,20 @@ import toast from 'react-hot-toast';
 import { bookTicket } from '../services/train.ts';
 
 interface Passenger {
-  name: string;
-  age: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  dateOfBirth: string;
   gender: string;
+  concessionCategory?: string;
 }
 
 const travelClasses = [
   'Sleeper',
-  'AC 3 Tier',
-  'AC 2 Tier',
-  'AC First Class',
-  'Second Sitting',
-  'First Class',
-  'Chair Car'
+  'AC 3-tier',
+  'AC 2-tier',
+  'First Class'
 ];
 
 const BookTicket: React.FC = () => {
@@ -27,22 +28,21 @@ const BookTicket: React.FC = () => {
 
   const [selectedClass, setSelectedClass] = useState<string>(travelClasses[0]);
   const [passengers, setPassengers] = useState<Passenger[]>([
-    { name: '', age: 0, gender: '' }
+    { firstName: '', lastName: '', email: '', phone: '', dateOfBirth: '', gender: '', concessionCategory: '' }
   ]);
   const [loading, setLoading] = useState(false);
 
-  const handlePassengerChange = (index: number, field: keyof Passenger, value: string | number) => {
+  const handlePassengerChange = (index: number, field: keyof Passenger, value: string) => {
     const updated = [...passengers];
-    if (field === 'age') {
-      updated[index][field] = Number(value) as Passenger[typeof field];
-    } else {
-      updated[index][field] = String(value) as Passenger[typeof field];
-    }
+    updated[index][field] = value;
     setPassengers(updated);
   };
 
   const addPassenger = () => {
-    setPassengers([...passengers, { name: '', age: 0, gender: '' }]);
+    setPassengers([
+      ...passengers,
+      { firstName: '', lastName: '', email: '', phone: '', dateOfBirth: '', gender: '', concessionCategory: '' }
+    ]);
   };
 
   const removePassenger = (index: number) => {
@@ -56,17 +56,31 @@ const BookTicket: React.FC = () => {
       toast.error('Train or journey date missing!');
       return;
     }
-    if (passengers.some(p => !p.name || !p.age || !p.gender)) {
+    if (passengers.some(p => !p.firstName || !p.lastName || !p.email || !p.phone || !p.dateOfBirth || !p.gender)) {
       toast.error('Fill all passenger details!');
       return;
     }
     setLoading(true);
     try {
+      const trainId = train.train_id;
+      const sourceStation = train.sourceStation || train.source || '';
+      const destinationStation = train.destinationStation || train.destination || '';
+      // For demo, sum up a fake fare per passenger
+      const totalFare = 500 * passengers.length;
+      console.log('Booking call:', { trainId, journeyDate, selectedClass, sourceStation, destinationStation, passengers, totalFare });
+      // Ensure each passenger's concessionCategory is valid and defaults to 'None'
+      const cleanedPassengers = passengers.map(p => ({
+        ...p,
+        concessionCategory: (p.concessionCategory && ['Senior Citizen','Student','Disabled','None'].includes(p.concessionCategory)) ? p.concessionCategory : 'None'
+      }));
       await bookTicket(
-        train.trainNumber, // or train.trainId if backend expects trainId
+        trainId,
         journeyDate,
         selectedClass,
-        passengers
+        sourceStation,
+        destinationStation,
+        cleanedPassengers,
+        totalFare
       );
       toast.success('Ticket booked successfully!');
       navigate('/bookings');
@@ -110,22 +124,45 @@ const BookTicket: React.FC = () => {
             </select>
           </div>
           {passengers.map((passenger, idx) => (
-            <div key={idx} className="flex space-x-2 items-end">
+            <div key={idx} className="flex flex-wrap gap-2 items-end mb-2">
               <input
                 type="text"
-                placeholder="Name"
-                value={passenger.name}
-                onChange={e => handlePassengerChange(idx, 'name', e.target.value)}
+                placeholder="First Name"
+                value={passenger.firstName}
+                onChange={e => handlePassengerChange(idx, 'firstName', e.target.value)}
                 className="input-field"
                 required
               />
               <input
-                type="number"
-                placeholder="Age"
-                value={passenger.age || ''}
-                min={1}
-                onChange={e => handlePassengerChange(idx, 'age', Number(e.target.value))}
-                className="input-field w-20"
+                type="text"
+                placeholder="Last Name"
+                value={passenger.lastName}
+                onChange={e => handlePassengerChange(idx, 'lastName', e.target.value)}
+                className="input-field"
+                required
+              />
+              <input
+                type="email"
+                placeholder="Email"
+                value={passenger.email}
+                onChange={e => handlePassengerChange(idx, 'email', e.target.value)}
+                className="input-field"
+                required
+              />
+              <input
+                type="tel"
+                placeholder="Phone"
+                value={passenger.phone}
+                onChange={e => handlePassengerChange(idx, 'phone', e.target.value)}
+                className="input-field"
+                required
+              />
+              <input
+                type="date"
+                placeholder="Date of Birth"
+                value={passenger.dateOfBirth}
+                onChange={e => handlePassengerChange(idx, 'dateOfBirth', e.target.value)}
+                className="input-field"
                 required
               />
               <select
@@ -138,6 +175,17 @@ const BookTicket: React.FC = () => {
                 <option value="Male">Male</option>
                 <option value="Female">Female</option>
                 <option value="Other">Other</option>
+              </select>
+              <select
+                value={passenger.concessionCategory || 'None'}
+                onChange={e => handlePassengerChange(idx, 'concessionCategory', e.target.value)}
+                className="input-field"
+                required
+              >
+                <option value="None">None</option>
+                <option value="Senior Citizen">Senior Citizen</option>
+                <option value="Student">Student</option>
+                <option value="Disabled">Disabled</option>
               </select>
               <button type="button" onClick={() => removePassenger(idx)} className="btn-danger px-2">-</button>
             </div>

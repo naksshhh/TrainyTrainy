@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import { searchTrains, Train } from '../services/train.ts';
+import { fetchStationSuggestions, Station } from '../services/station.ts';
 
 const SearchTrains: React.FC = () => {
   const [source, setSource] = useState('');
@@ -10,6 +11,12 @@ const SearchTrains: React.FC = () => {
   const [date, setDate] = useState('');
   const [loading, setLoading] = useState(false);
   const [trains, setTrains] = useState<Train[]>([]);
+  const [sourceSuggestions, setSourceSuggestions] = useState<Station[]>([]);
+  const [destinationSuggestions, setDestinationSuggestions] = useState<Station[]>([]);
+  const [showSourceDropdown, setShowSourceDropdown] = useState(false);
+  const [showDestinationDropdown, setShowDestinationDropdown] = useState(false);
+  const sourceTimeout = useRef<NodeJS.Timeout | null>(null);
+  const destinationTimeout = useRef<NodeJS.Timeout | null>(null);
   const navigate = useNavigate();
 
   const handleSearch = async (e: React.FormEvent) => {
@@ -20,7 +27,7 @@ const SearchTrains: React.FC = () => {
       const results = await searchTrains(source, destination, date);
       setTrains(results);
       if (results.length === 0) {
-        toast.info('No trains found for the selected route and date');
+        toast('No trains found for the selected route and date');
       } else {
         toast.success('Trains found successfully!');
       }
@@ -31,6 +38,8 @@ const SearchTrains: React.FC = () => {
     }
   };
 
+  // The train object includes train_id (primary key) and trainNumber (public number).
+  // Always use train.train_id for booking actions.
   const handleBookNow = (train: Train) => {
     navigate('/book', {
       state: {
@@ -54,11 +63,47 @@ const SearchTrains: React.FC = () => {
               type="text"
               id="source"
               value={source}
-              onChange={(e) => setSource(e.target.value)}
+              autoComplete="off"
+              onChange={async (e) => {
+                const value = e.target.value;
+                setSource(value);
+                setShowSourceDropdown(true);
+                if (sourceTimeout.current) clearTimeout(sourceTimeout.current);
+                sourceTimeout.current = setTimeout(async () => {
+                  if (value.length > 0) {
+                    try {
+                      const suggestions = await fetchStationSuggestions(value);
+                      setSourceSuggestions(suggestions);
+                    } catch (err) {
+                      setSourceSuggestions([]);
+                    }
+                  } else {
+                    setSourceSuggestions([]);
+                  }
+                }, 250);
+              }}
+              onFocus={() => setShowSourceDropdown(true)}
+              onBlur={() => setTimeout(() => setShowSourceDropdown(false), 150)}
               className="input-field mt-1"
               placeholder="Enter source station"
               required
             />
+            {showSourceDropdown && sourceSuggestions.length > 0 && (
+              <ul className="absolute z-10 bg-white border border-gray-200 w-full mt-1 rounded shadow">
+                {sourceSuggestions.map((s) => (
+                  <li
+                    key={s.station_id}
+                    className="px-3 py-2 hover:bg-indigo-100 cursor-pointer"
+                    onMouseDown={() => {
+                      setSource(s.station_name);
+                      setShowSourceDropdown(false);
+                    }}
+                  >
+                    {s.station_name} ({s.station_code})
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
           <div className="flex-1">
             <label htmlFor="destination" className="block text-sm font-medium text-gray-700">
@@ -68,11 +113,47 @@ const SearchTrains: React.FC = () => {
               type="text"
               id="destination"
               value={destination}
-              onChange={(e) => setDestination(e.target.value)}
+              autoComplete="off"
+              onChange={async (e) => {
+                const value = e.target.value;
+                setDestination(value);
+                setShowDestinationDropdown(true);
+                if (destinationTimeout.current) clearTimeout(destinationTimeout.current);
+                destinationTimeout.current = setTimeout(async () => {
+                  if (value.length > 0) {
+                    try {
+                      const suggestions = await fetchStationSuggestions(value);
+                      setDestinationSuggestions(suggestions);
+                    } catch (err) {
+                      setDestinationSuggestions([]);
+                    }
+                  } else {
+                    setDestinationSuggestions([]);
+                  }
+                }, 250);
+              }}
+              onFocus={() => setShowDestinationDropdown(true)}
+              onBlur={() => setTimeout(() => setShowDestinationDropdown(false), 150)}
               className="input-field mt-1"
               placeholder="Enter destination station"
               required
             />
+            {showDestinationDropdown && destinationSuggestions.length > 0 && (
+              <ul className="absolute z-10 bg-white border border-gray-200 w-full mt-1 rounded shadow">
+                {destinationSuggestions.map((s) => (
+                  <li
+                    key={s.station_id}
+                    className="px-3 py-2 hover:bg-indigo-100 cursor-pointer"
+                    onMouseDown={() => {
+                      setDestination(s.station_name);
+                      setShowDestinationDropdown(false);
+                    }}
+                  >
+                    {s.station_name} ({s.station_code})
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
           <div className="flex-1">
             <label htmlFor="date" className="block text-sm font-medium text-gray-700">
@@ -138,7 +219,7 @@ const SearchTrains: React.FC = () => {
               
               {/* Seat Availability */}
               <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
-                {Object.entries(train.availableSeats).map(([className, seats]) => (
+                {Object.entries(train.availableSeats || {}).map(([className, seats]) => (
                   <div key={className} className="text-center p-3 bg-gray-50 rounded-lg">
                     <p className="text-sm font-medium text-gray-700">{className}</p>
                     <p className="mt-1 text-lg font-semibold text-indigo-600">{seats} seats</p>

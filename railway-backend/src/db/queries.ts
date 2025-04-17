@@ -1,5 +1,19 @@
 import pool from '../config/db';
 
+// Station autocomplete
+export const searchStations = async (query: string) => {
+  const sql = `
+    SELECT station_id, station_name, station_code
+    FROM Station
+    WHERE station_name LIKE ? OR station_code LIKE ?
+    ORDER BY station_name ASC
+    LIMIT 10
+  `;
+  const values = [`%${query}%`, `%${query}%`];
+  const [rows] = await pool.execute(sql, values);
+  return rows;
+};
+
 // User queries
 export const createUser = async (username: string, email: string, password: string) => {
   const query = `
@@ -19,7 +33,27 @@ export const getUserByEmail = async (email: string) => {
 };
 
 // Train queries
-export const searchTrains = async (source: string, destination: string, date: string) => {
+import { RowDataPacket } from 'mysql2';
+
+export interface TrainRow extends RowDataPacket {
+  train_id: number;
+  train_number: string;
+  train_name: string;
+  route_id: number;
+  total_seats: number;
+  source_station: string;
+  destination_station: string;
+  class_availability?: { class_type: string; available_seats: number }[];
+  departure_time?: string;
+  arrival_time?: string;
+  duration?: string;
+}
+
+export const searchTrains = async (
+  source: string,
+  destination: string,
+  date: string
+): Promise<TrainRow[]> => {
   const query = `
     SELECT DISTINCT
            t.train_id,
@@ -55,7 +89,7 @@ export const searchTrains = async (source: string, destination: string, date: st
     GROUP BY t.train_id
   `;
   const values = [date, `%${source}%`, `%${destination}%`];
-  const [rows] = await pool.execute(query, values);
+  const [rows] = await pool.execute<TrainRow[]>(query, values);
   return rows;
 };
 
@@ -69,22 +103,24 @@ const formatSeatNumber = (classType: string, number: number, status: 'Confirmed'
   let seatNum = '';
   switch (status) {
     case 'Confirmed':
-      // Compact formats: S-001, A2-001, A3-001, F-001 (all <= 6 chars)
+      // Use abbreviations and hyphen: S-001, A2-001, A3-001, F-001
+      let abbr = '';
       switch (classType) {
-        case 'Sleeper': seatNum = `S-${number.toString().padStart(3, '0')}`; break;
-        case 'AC 2-tier': seatNum = `A2-${number.toString().padStart(3, '0')}`; break;
-        case 'AC 3-tier': seatNum = `A3-${number.toString().padStart(3, '0')}`; break;
-        case 'First Class': seatNum = `F-${number.toString().padStart(3, '0')}`; break;
-        default: seatNum = `${number.toString().padStart(3, '0')}`; break;
+        case 'Sleeper': abbr = 'S'; break;
+        case 'AC 2-tier': abbr = 'A2'; break;
+        case 'AC 3-tier': abbr = 'A3'; break;
+        case 'First Class': abbr = 'F'; break;
+        default: abbr = 'X'; break;
       }
+      seatNum = `${abbr}-${number.toString().padStart(3, '0')}`;
       break;
     case 'RAC':
-      // Format: R01, R02, etc. (max 3-4 chars)
-      seatNum = `R${number.toString().padStart(2, '0')}`;
+      // Format: R-01, R-02, etc.
+      seatNum = `R-${number.toString().padStart(2, '0')}`;
       break;
     case 'Waitlist':
-      // Format: W001, W002, etc. (max 4 chars)
-      seatNum = `W${number.toString().padStart(3, '0')}`;
+      // Format: W-001, W-002, etc.
+      seatNum = `W-${number.toString().padStart(3, '0')}`;
       break;
     default:
       seatNum = number.toString();

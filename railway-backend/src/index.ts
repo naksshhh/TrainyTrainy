@@ -8,6 +8,7 @@ import authRoutes from './routes/auth';
 import trainRoutes from './routes/trains';
 import bookingRoutes from './routes/bookings';
 import pnrRoutes from './routes/pnr';
+import stationRoutes from './routes/stations';
 
 dotenv.config();
 
@@ -23,6 +24,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/trains', trainRoutes);
 app.use('/api/bookings', auth, bookingRoutes);
 app.use('/api/pnr', pnrRoutes);
+app.use('/api/stations', stationRoutes);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

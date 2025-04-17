@@ -4,6 +4,17 @@ import { getBookingByPNR } from '../db/queries';
 const router = express.Router();
 
 // Check PNR status
+// Define a type for booking detail (adjust fields as per your DB schema)
+type BookingDetail = {
+  name: string;
+  age: number;
+  gender: string;
+  seat_number: string;
+  status: string;
+  // Add other fields as needed
+  [key: string]: any;
+};
+
 router.get('/:pnrNumber', async (req: express.Request, res: express.Response) => {
   try {
     const { pnrNumber } = req.params;
@@ -14,21 +25,25 @@ router.get('/:pnrNumber', async (req: express.Request, res: express.Response) =>
 
     const bookingDetails = await getBookingByPNR(pnrNumber);
 
-    if (!bookingDetails || bookingDetails.length === 0) {
+    if (!Array.isArray(bookingDetails) || bookingDetails.length === 0) {
       return res.status(404).json({ error: 'Booking not found' });
     }
 
     // Group passengers by booking
-    const booking = {
-      ...bookingDetails[0],
-      passengers: bookingDetails.map(detail => ({
-        name: detail.name,
-        age: detail.age,
-        gender: detail.gender,
-        seatNumber: detail.seat_number,
-        status: detail.status
-      }))
-    };
+    const details = bookingDetails as BookingDetail[];
+// Exclude passenger-specific fields from booking-level info
+const { name, age, gender, seat_number, status, ...bookingInfo } = details[0];
+
+const booking = {
+  ...bookingInfo,
+  passengers: details.map((detail) => ({
+    name: detail.name,
+    age: detail.age,
+    gender: detail.gender,
+    seatNumber: detail.seat_number,
+    status: detail.status
+  }))
+};
 
     res.json(booking);
   } catch (error) {
@@ -37,4 +52,4 @@ router.get('/:pnrNumber', async (req: express.Request, res: express.Response) =>
   }
 });
 
-export default router; 
+export default router;

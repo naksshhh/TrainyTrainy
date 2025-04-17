@@ -27,7 +27,20 @@ const PNRStatus: React.FC = () => {
 
     try {
       const bookingDetails = await getBookingDetails(pnr);
-      setTicket(bookingDetails);
+      // Map backend response to PNRDetails structure
+      const passenger = bookingDetails.passengers && bookingDetails.passengers[0];
+      setTicket({
+        pnrNumber: bookingDetails.pnr_number || bookingDetails.pnrNumber || pnr,
+        passengerName: passenger ? passenger.name : '',
+        trainNumber: bookingDetails.train_number || bookingDetails.trainNumber || '',
+        trainName: bookingDetails.train_name || bookingDetails.trainName || '',
+        source: bookingDetails.source || bookingDetails.source_station || '',
+        destination: bookingDetails.destination || bookingDetails.destination_station || '',
+        journeyDate: bookingDetails.journey_date || bookingDetails.journeyDate || '',
+        class: bookingDetails.class_type || bookingDetails.class || '',
+        seatNumber: passenger ? (passenger.seatNumber || passenger.seat_number || '') : '',
+        status: passenger ? passenger.status : '',
+      });
       toast.success('PNR details found!');
     } catch (error) {
       toast.error('Failed to fetch PNR details. Please try again.');
